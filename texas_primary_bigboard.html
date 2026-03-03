@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 Texas Primary — Election Big Board</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap');
+
+:root {
+  --gold: #f0b429;
+  --gold-dim: rgba(240,180,41,0.12);
+  --bg: #070710;
+  --panel: #0e0e1c;
+  --panel2: #12121e;
+  --border: rgba(255,255,255,0.07);
+  --text: #f0f2ff;
+  --subtext: #8892aa;
+  --green: #f4b903;
+  --party-color: #c0392b;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Barlow Condensed', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ══════════════════════════════════
+   HEADER
+══════════════════════════════════ */
+#header {
+  display: flex;
+  align-items: stretch;
+  height: 56px;
+  flex-shrink: 0;
+  background: #05050e;
+  border-bottom: 2px solid var(--gold);
+}
+.hd-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 20px;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.hd-year { font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+.hd-year .y2 { color: var(--text); }
+.hd-year .y6 { color: var(--gold); }
+.hd-label { display: flex; flex-direction: column; justify-content: center; }
+.hd-label .l1 { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--subtext); }
+.hd-label .l2 { font-size: 1rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); }
+
+#party-tabs { display: flex; align-items: stretch; flex: 1; }
+.party-tab {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-size: 1rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase;
+  cursor: pointer; border: none; background: transparent; color: var(--subtext);
+  border-bottom: 3px solid transparent;
+  transition: all 0.18s; padding: 0 24px;
+}
+.party-tab .tab-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: currentColor; opacity: 0.35; flex-shrink: 0; transition: opacity 0.18s;
+}
+.party-tab:hover { background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.65); }
+.party-tab.active { color: var(--text); border-bottom-color: var(--party-color); background: rgba(255,255,255,0.04); }
+.party-tab.active .tab-dot { opacity: 1; background: var(--party-color); }
+.tab-rpt {
+  font-size: 0.63rem; font-weight: 600; letter-spacing: 0.06em;
+  color: var(--subtext); font-family: 'Barlow', sans-serif;
+  background: rgba(255,255,255,0.06); padding: 2px 7px; border-radius: 2px;
+}
+
+.hd-right {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 16px; border-left: 1px solid var(--border); flex-shrink: 0;
+}
+.hd-status {
+  font-size: 0.67rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 2px;
+  background: rgba(255,255,255,0.05); color: var(--subtext);
+  display: flex; align-items: center; gap: 5px;
+}
+.hd-status.live { background: rgba(220,50,50,0.18); color: #ff7777; }
+.hd-status.live::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: #ff4444; animation: blink 1.4s infinite; flex-shrink: 0;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+.hd-timer { font-size: 0.65rem; color: var(--subtext); font-family: 'Barlow', sans-serif; white-space: nowrap; }
+
+/* ══════════════════════════════════
+   MAIN
+══════════════════════════════════ */
+#main {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  flex: 1;
+  overflow: hidden;
+  padding: 10px;
+  gap: 10px;
+}
+
+/* ══════════════════════════════════
+   MAP
+══════════════════════════════════ */
+#map-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex; flex-direction: column;
+  overflow: hidden; position: relative;
+}
+#map-titlebar {
+  padding: 9px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.mt-title { font-size: 0.85rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+.mt-sub { font-size: 0.68rem; color: var(--subtext); font-family: 'Barlow', sans-serif; }
+.map-legend {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 0.67rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--subtext);
+}
+.leg-item { display: flex; align-items: center; gap: 4px; }
+.leg-sw { width: 11px; height: 11px; border-radius: 1px; }
+
+#svg-container {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 8px; position: relative; overflow: hidden;
+}
+#map-svg { width: 100%; height: 100%; display: block; }
+
+/* tooltip */
+#tt {
+  position: absolute; background: #18182e; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 3px; padding: 9px 13px; pointer-events: none;
+  opacity: 0; transition: opacity 0.12s; z-index: 20;
+  min-width: 155px; box-shadow: 0 6px 24px rgba(0,0,0,0.7);
+}
+#tt.show { opacity: 1; }
+#tt .tt-name { font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; }
+.tt-row { display: flex; justify-content: space-between; gap: 10px; margin: 2px 0; font-size: 0.78rem; }
+.tt-cn { color: var(--subtext); }
+.tt-pct { font-weight: 700; }
+.tt-rpt { font-size: 0.67rem; color: var(--subtext); margin-top: 5px; border-top: 1px solid var(--border); padding-top: 4px; }
+.tt-hint { font-size: 0.64rem; color: var(--gold); margin-top: 3px; }
+
+/* ══════════════════════════════════
+   RESULTS PANEL
+══════════════════════════════════ */
+#results-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+#rp-header {
+  padding: 9px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0; border-bottom: 1px solid var(--border);
+}
+#rp-title { font-size: 1rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
+#rp-reporting { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); }
+#rp-reporting span { color: #fff; font-size: 0.88rem; font-weight: 800; }
+
+.rp-cols {
+  display: grid; grid-template-columns: 54px 1fr 78px 68px;
+  padding: 4px 10px; gap: 4px;
+  font-size: 0.61rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--subtext);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.rp-cols .rc-r { text-align: right; }
+
+#cand-list { overflow-y: auto; flex: 1; }
+#cand-list::-webkit-scrollbar { width: 3px; }
+#cand-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+.cand-row {
+  display: grid; grid-template-columns: 54px 1fr 78px 68px;
+  align-items: center; gap: 4px;
+  min-height: 62px; border-bottom: 1px solid var(--border);
+  position: relative; overflow: hidden; transition: background 0.15s;
+}
+.cand-row:last-child { border-bottom: none; }
+.cand-row:hover { background: rgba(255,255,255,0.02); }
+.cand-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  opacity: 0.07; transition: width 1.1s ease; pointer-events: none;
+}
+.cand-photo { width: 54px; height: 62px; overflow: hidden; flex-shrink: 0; }
+.cand-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.cand-photo .no-ph {
+  width: 54px; height: 62px; display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; background: rgba(255,255,255,0.03); color: var(--subtext);
+}
+.cand-info { padding: 0 8px; }
+.cand-badges { display: flex; gap: 4px; margin-bottom: 2px; flex-wrap: wrap; }
+.badge { font-size: 0.52rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 1px 5px; border-radius: 1px; }
+.bdg-inc { background: #4a4a5a; color: #ccc; }
+.bdg-win { background: #f4b903; color: #000; }
+.bdg-runoff { background: #7c3aed; color: #fff; }
+.cand-first { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); }
+.cand-last { font-size: 1.2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.05; }
+.cand-sub { font-size: 0.63rem; color: var(--subtext); font-family: 'Barlow', sans-serif; }
+.cand-bar-cell { padding: 0 5px; }
+.bar-track { height: 7px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 2px; transition: width 1.1s ease; }
+.cand-votes-lbl { font-size: 0.67rem; color: var(--subtext); font-family: 'Barlow', sans-serif; margin-top: 3px; text-align: right; }
+.cand-pct-cell { text-align: right; padding-right: 10px; }
+.pct-big { font-size: 1.65rem; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }
+.pct-sign { font-size: 0.85rem; font-weight: 600; color: var(--subtext); }
+
+.runoff-notice {
+  padding: 7px 14px; text-align: center;
+  font-size: 0.67rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--gold); border-top: 1px solid rgba(240,180,41,0.18);
+  background: var(--gold-dim); flex-shrink: 0;
+}
+
+/* ══════════════════════════════════
+   COUNTY MODAL
+══════════════════════════════════ */
+#county-modal {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(4,4,14,0.88);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+#county-modal.open { opacity: 1; pointer-events: all; }
+#cm-inner {
+  background: var(--panel2); border: 1px solid rgba(255,255,255,0.11);
+  border-radius: 5px; width: 640px; max-width: 96vw; max-height: 85vh;
+  overflow-y: auto; box-shadow: 0 20px 80px rgba(0,0,0,0.85);
+  transform: translateY(8px); transition: transform 0.22s;
+}
+#county-modal.open #cm-inner { transform: translateY(0); }
+#cm-head {
+  padding: 14px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 2px solid var(--gold);
+  position: sticky; top: 0; background: var(--panel2); z-index: 2;
+}
+#cm-county-name { font-size: 1.5rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; }
+#cm-rpt { font-size: 0.75rem; color: var(--subtext); font-family: 'Barlow', sans-serif; margin-top: 2px; }
+#cm-close {
+  background: rgba(255,255,255,0.06); border: none; color: var(--text);
+  width: 28px; height: 28px; border-radius: 2px; cursor: pointer;
+  font-size: 1rem; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s; flex-shrink: 0;
+}
+#cm-close:hover { background: rgba(255,255,255,0.14); }
+#cm-body { padding: 14px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cm-party-block { display: flex; flex-direction: column; gap: 3px; }
+.cm-party-hd {
+  font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 5px 9px; border-radius: 2px; margin-bottom: 5px;
+}
+.cm-cand-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 9px; border-radius: 3px; background: rgba(255,255,255,0.025);
+  margin-bottom: 3px; position: relative; overflow: hidden;
+}
+.cm-bg { position: absolute; left: 0; top: 0; bottom: 0; opacity: 0.08; transition: width 1s; }
+.cm-name { flex: 1; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; }
+.cm-votes { font-size: 0.67rem; color: var(--subtext); font-family: 'Barlow', sans-serif; }
+.cm-pct { font-size: 1.3rem; font-weight: 900; white-space: nowrap; }
+
+/* ══════════════════════════════════
+   FOOTER
+══════════════════════════════════ */
+#footer {
+  height: 26px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px;
+  font-size: 0.66rem; font-family: 'Barlow', sans-serif;
+  color: var(--subtext); border-top: 1px solid var(--border);
+  background: #05050e;
+}
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<div id="header">
+  <div class="hd-brand">
+    <div class="hd-year"><span class="y2">20</span><span class="y6">26</span></div>
+    <div class="hd-label">
+      <div class="l1">Senate Primary</div>
+      <div class="l2">★ Texas</div>
+    </div>
+  </div>
+  <div id="party-tabs">
+    <button class="party-tab active" id="tab-R" onclick="setParty('R')">
+      <div class="tab-dot"></div>
+      Republican Primary
+      <div class="tab-rpt" id="tab-rpt-R">—% reporting</div>
+    </button>
+    <button class="party-tab" id="tab-D" onclick="setParty('D')">
+      <div class="tab-dot"></div>
+      Democratic Primary
+      <div class="tab-rpt" id="tab-rpt-D">—% reporting</div>
+    </button>
+  </div>
+  <div class="hd-right">
+    <div class="hd-timer" id="hd-timer">—</div>
+    <div class="hd-status" id="hd-status">Loading…</div>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div id="main">
+  <div id="map-panel">
+    <div id="map-titlebar">
+      <div>
+        <div class="mt-title" id="map-title">Texas County Map — Republican Primary</div>
+        <div class="mt-sub">Hover for results · Click to drill down</div>
+      </div>
+      <div class="map-legend">
+        <div class="leg-item"><div class="leg-sw" id="leg-strong"></div> Strong lead</div>
+        <div class="leg-item"><div class="leg-sw" id="leg-lean"></div> Lean</div>
+        <div class="leg-item"><div class="leg-sw" style="background:#1a1a30"></div> No data</div>
+      </div>
+    </div>
+    <div id="svg-container">
+      <svg id="map-svg"></svg>
+      <div id="tt">
+        <div class="tt-name" id="tt-name">—</div>
+        <div id="tt-cands"></div>
+        <div class="tt-rpt" id="tt-rpt"></div>
+        <div class="tt-hint">Click to drill down →</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="results-panel">
+    <div id="rp-header">
+      <div id="rp-title">Republican Primary</div>
+      <div id="rp-reporting">Reporting: <span id="rp-rpt-val">—</span></div>
+    </div>
+    <div class="rp-cols">
+      <div></div><div>Candidate</div>
+      <div class="rc-r">Votes</div><div class="rc-r">%</div>
+    </div>
+    <div id="cand-list"></div>
+    <div class="runoff-notice">50% required to win — Runoff: May 2026 if no majority</div>
+  </div>
+</div>
+
+<!-- ══ COUNTY MODAL ══ -->
+<div id="county-modal" onclick="if(event.target===this)closeCounty()">
+  <div id="cm-inner">
+    <div id="cm-head">
+      <div>
+        <div id="cm-county-name">County</div>
+        <div id="cm-rpt"></div>
+      </div>
+      <button id="cm-close" onclick="closeCounty()">✕</button>
+    </div>
+    <div id="cm-body"></div>
+  </div>
+</div>
+
+<!-- ══ FOOTER ══ -->
+<div id="footer">
+  <span>2026 Texas Primary Big Board</span>
+  <span id="footer-time">—</span>
+</div>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════════════
+// ── DATA SOURCE CONFIG ────────────────────────────────────────────
+//    Set these to your GCS public URLs when ready.
+//    Leave as null to use the built-in demo data below.
+// ══════════════════════════════════════════════════════════════════
+const CANDIDATES_URL = 'https://storage.googleapis.com/aus-dashboard/election_big_board/candidates_2026.csv'; // e.g. 'https://storage.googleapis.com/my-bucket/candidates.csv'
+const RESULTS_URL    = 'https://storage.googleapis.com/aus-dashboard/election_big_board/results_2026.csv'; // e.g. 'https://storage.googleapis.com/my-bucket/results.csv'
+const REFRESH_SEC    = 300;   // how often to re-fetch results (candidates are fetched once)
+
+// ══════════════════════════════════════════════════════════════════
+// ── DEMO DATA ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+
+// candidates.csv  — static config, loaded once
+// Columns: candidate_id, party, name_first, name_last, subtitle, incumbent, photo_url, hex_color
+const DEMO_CANDIDATES = `candidate_id,party,name_first,name_last,subtitle,incumbent,photo_url,hex_color
+R001,R,John,Cornyn,U.S. Senator,true,,#c0392b
+R002,R,Ken,Paxton,Former Attorney General,false,,#e85d04
+R003,R,Wesley,Hunt,U.S. Representative,false,,#f77f00
+R004,R,Brandon,Herrera,Candidate,false,,#fcbf49
+D001,D,Colin,Allred,Former U.S. Representative,false,,#1a56b0
+D002,D,Roland,Gutierrez,State Senator,false,,#4895ef
+D003,D,Ana-Maria,Ramos,State Representative,false,,#4cc9f0`;
+
+// results.csv  — live data, refreshed every REFRESH_SEC seconds
+// Columns: candidate_id, county, votes, pct_vote, pct_reporting, called
+// Use county = STATEWIDE for the main board totals
+const DEMO_RESULTS = `candidate_id,county,votes,pct_vote,pct_reporting,called
+R001,STATEWIDE,318420,44.2,62,false
+R002,STATEWIDE,265103,36.8,62,false
+R003,STATEWIDE,91440,12.7,62,false
+R004,STATEWIDE,45388,6.3,62,false
+D001,STATEWIDE,182054,61.4,62,true
+D002,STATEWIDE,73820,24.9,62,false
+D003,STATEWIDE,40621,13.7,62,false
+R001,HARRIS,48203,51.3,88,false
+R002,HARRIS,29321,31.2,88,false
+R003,HARRIS,11372,12.1,88,false
+R004,HARRIS,5073,5.4,88,false
+D001,HARRIS,72041,63.1,88,true
+D002,HARRIS,26731,23.4,88,false
+D003,HARRIS,15430,13.5,88,false
+R001,DALLAS,22403,53.1,91,false
+R002,DALLAS,12588,29.8,91,false
+R003,DALLAS,4814,11.4,91,false
+R004,DALLAS,2407,5.7,91,false
+D001,DALLAS,41032,71.2,91,true
+D002,DALLAS,10432,18.1,91,false
+D003,DALLAS,6167,10.7,91,false
+R001,TARRANT,31203,47.2,74,false
+R002,TARRANT,25388,38.4,74,false
+R003,TARRANT,6481,9.8,74,false
+R004,TARRANT,3041,4.6,74,false
+D001,TARRANT,18032,58.2,74,true
+D002,TARRANT,8463,27.3,74,false
+D003,TARRANT,4497,14.5,74,false
+R001,BEXAR,14203,56.1,93,false
+R002,BEXAR,6888,27.2,93,false
+R003,BEXAR,2861,11.3,93,false
+R004,BEXAR,1367,5.4,93,false
+D001,BEXAR,32041,67.4,93,true
+D002,BEXAR,10082,21.2,93,false
+D003,BEXAR,5421,11.4,93,false
+R001,TRAVIS,9203,61.2,81,false
+R002,TRAVIS,3278,21.8,81,false
+R003,TRAVIS,1759,11.7,81,false
+R004,TRAVIS,797,5.3,81,false
+D001,TRAVIS,52041,74.2,81,true
+D002,TRAVIS,11852,16.9,81,false
+D003,TRAVIS,6242,8.9,81,false
+R001,WILLIAMSON,6201,58.3,79,false
+R002,WILLIAMSON,2782,26.1,79,false
+R003,WILLIAMSON,1162,10.9,79,false
+R004,WILLIAMSON,501,4.7,79,false
+D001,WILLIAMSON,14032,69.1,79,true
+D002,WILLIAMSON,4108,20.2,79,false
+D003,WILLIAMSON,2175,10.7,79,false
+R001,EL PASO,11203,44.9,68,false
+R002,EL PASO,8533,34.2,68,false
+R003,EL PASO,3566,14.3,68,false
+R004,EL PASO,1646,6.6,68,false
+D001,EL PASO,28032,73.1,68,true
+D002,EL PASO,6832,17.8,68,false
+D003,EL PASO,3491,9.1,68,false`;
+
+// ══════════════════════════════════════════════════════════════════
+// ── APP STATE
+// ══════════════════════════════════════════════════════════════════
+let activeParty  = 'R';
+let candidateMap = {};  // { candidate_id: candidateObj }
+let stateData    = { R: [], D: [] };   // joined rows for STATEWIDE
+let countyData   = {};                 // { COUNTYNAME: { R: [], D: [] } }
+let countyPaths  = null;
+let refreshTimer = null;
+let countdown    = REFRESH_SEC;
+
+const partyDefaults = { R: '#c0392b', D: '#1a56b0' };
+
+// ══════════════════════════════════════════════════════════════════
+// ── CSV PARSER
+// ══════════════════════════════════════════════════════════════════
+function parseCSV(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\r/g, ''));
+  return lines.slice(1).map(line => {
+    const cols = []; let cur = '', inQ = false;
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    cols.push(cur.trim().replace(/\r/g, ''));
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (cols[i] ?? '').trim(); });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── FETCH HELPERS
+// ══════════════════════════════════════════════════════════════════
+async function fetchCSV(url) {
+  const res = await fetch(url + '?_=' + Date.now());
+  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+  return res.text();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── LOAD CANDIDATES  (once at startup)
+// ══════════════════════════════════════════════════════════════════
+async function loadCandidates() {
+  let text;
+  if (CANDIDATES_URL) {
+    text = await fetchCSV(CANDIDATES_URL);
+  } else {
+    text = DEMO_CANDIDATES;
+  }
+  const rows = parseCSV(text);
+  candidateMap = {};
+  rows.forEach(r => {
+    if (r.candidate_id) candidateMap[r.candidate_id] = r;
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── LOAD RESULTS  (called on every refresh)
+// ══════════════════════════════════════════════════════════════════
+async function loadResults() {
+  let text;
+  if (RESULTS_URL) {
+    text = await fetchCSV(RESULTS_URL);
+    setStatus('Live', true);
+  } else {
+    text = DEMO_RESULTS;
+    setStatus('Demo', false);
+  }
+
+  const rows = parseCSV(text);
+  processResults(rows);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── JOIN & PROCESS
+// ══════════════════════════════════════════════════════════════════
+function processResults(resultRows) {
+  stateData  = { R: [], D: [] };
+  countyData = {};
+
+  resultRows.forEach(r => {
+    const cand = candidateMap[r.candidate_id];
+    if (!cand) return; // unknown candidate_id — skip
+
+    // Merge: candidate config + live result row
+    const joined = { ...cand, ...r };
+    const p      = cand.party.trim().toUpperCase();
+    if (p !== 'R' && p !== 'D') return;
+
+    const county = (r.county || 'STATEWIDE').toUpperCase().trim();
+    if (county === 'STATEWIDE' || county === '' || county === 'TX') {
+      stateData[p].push(joined);
+    } else {
+      if (!countyData[county]) countyData[county] = { R: [], D: [] };
+      countyData[county][p].push(joined);
+    }
+  });
+
+  // Update % reporting badges in header tabs
+  ['R', 'D'].forEach(p => {
+    const rpt = stateData[p]?.[0]?.pct_reporting;
+    const el  = document.getElementById(`tab-rpt-${p}`);
+    if (el) el.textContent = rpt ? `${rpt}% reporting` : '—% reporting';
+  });
+
+  renderBoard();
+  colorMap();
+  document.getElementById('footer-time').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── PARTY SWITCHING
+// ══════════════════════════════════════════════════════════════════
+function setParty(p) {
+  activeParty = p;
+
+  ['R', 'D'].forEach(id => {
+    document.getElementById(`tab-${id}`).classList.toggle('active', id === p);
+  });
+
+  const leadColor = getLeadColor(p);
+  document.documentElement.style.setProperty('--party-color', leadColor);
+
+  const label = p === 'R' ? 'Republican' : 'Democratic';
+  document.getElementById('map-title').textContent = `Texas County Map — ${label} Primary`;
+  document.getElementById('leg-strong').style.background = leadColor;
+  document.getElementById('leg-lean').style.background   = hexBlend(leadColor, '#0e0e1c', 0.45);
+
+  renderBoard();
+  colorMap();
+}
+
+function getLeadColor(p) {
+  const cands = stateData[p] || [];
+  if (!cands.length) return partyDefaults[p];
+  const top = [...cands].sort((a, b) => (parseFloat(b.pct_vote) || 0) - (parseFloat(a.pct_vote) || 0))[0];
+  return validHex(top.hex_color) ? top.hex_color : partyDefaults[p];
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── RENDER BOARD (right panel)
+// ══════════════════════════════════════════════════════════════════
+function renderBoard() {
+  const p         = activeParty;
+  const cands     = stateData[p] || [];
+  const label     = p === 'R' ? '🔴 Republican Primary' : '🔵 Democratic Primary';
+  const leadColor = getLeadColor(p);
+  const rpt       = cands[0]?.pct_reporting || '—';
+
+  const hdr = document.getElementById('rp-header');
+  hdr.style.background    = `linear-gradient(90deg, ${hexRgba(leadColor, 0.38)}, ${hexRgba(leadColor, 0.05)})`;
+  hdr.style.borderBottom  = `1px solid ${hexRgba(leadColor, 0.28)}`;
+  document.getElementById('rp-title').textContent  = label;
+  document.getElementById('rp-rpt-val').textContent = rpt !== '—' ? rpt + '%' : '—';
+
+  const list = document.getElementById('cand-list');
+  if (!cands.length) {
+    list.innerHTML = `<div style="padding:30px;text-align:center;color:var(--subtext);font-family:'Barlow',sans-serif;font-size:0.85rem;">No data loaded</div>`;
+    return;
+  }
+
+  const sorted = [...cands].sort((a, b) => (parseFloat(b.pct_vote) || 0) - (parseFloat(a.pct_vote) || 0));
+  const maxPct = Math.max(...sorted.map(c => parseFloat(c.pct_vote) || 0), 1);
+
+  list.innerHTML = sorted.map(c => {
+    const pct    = parseFloat(c.pct_vote)  || 0;
+    const barW   = Math.round((pct / 100)  * 100);
+    const bgW    = Math.round((pct / maxPct) * 100);
+    const color  = validHex(c.hex_color) ? c.hex_color : leadColor;
+    const isWin  = c.called === 'true' || c.called === '1';
+    const isInc  = c.incumbent === 'true' || c.incumbent === '1';
+    const above50 = pct >= 50 && !isWin;
+    const photo  = c.photo_url && c.photo_url.trim();
+
+    return `<div class="cand-row">
+      <div class="cand-fill" style="background:${color};width:${bgW}%"></div>
+      <div class="cand-photo">${photo
+        ? `<img src="${photo}" alt="${c.name_last}" onerror="this.parentElement.innerHTML='<div class=no-ph>👤</div>'">`
+        : `<div class="no-ph">👤</div>`}</div>
+      <div class="cand-info">
+        <div class="cand-badges">
+          ${isInc   ? '<span class="badge bdg-inc">Incumbent</span>' : ''}
+          ${isWin   ? '<span class="badge bdg-win">Winner ✓</span>' : ''}
+          ${above50 ? '<span class="badge bdg-runoff">Above 50%</span>' : ''}
+        </div>
+        <div class="cand-first">${c.name_first || ''}</div>
+        <div class="cand-last">${c.name_last || '—'}</div>
+        ${c.subtitle ? `<div class="cand-sub">${c.subtitle}</div>` : ''}
+      </div>
+      <div class="cand-bar-cell">
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${barW}%;background:${color}"></div>
+        </div>
+        <div class="cand-votes-lbl">${fmtVotes(c.votes)}</div>
+      </div>
+      <div class="cand-pct-cell">
+        <div class="pct-big" style="color:${color}">${pct.toFixed(1)}<span class="pct-sign">%</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── MAP
+// ══════════════════════════════════════════════════════════════════
+const TOPO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json';
+
+async function initMap() {
+  let topo;
+  try {
+    topo = await d3.json(TOPO_URL);
+  } catch (e) {
+    document.getElementById('map-svg').innerHTML =
+      `<text x="50%" y="50%" fill="#8892aa" text-anchor="middle" font-family="Barlow Condensed" font-size="14">Map unavailable (network error)</text>`;
+    return;
+  }
+
+  const allCounties = topojson.feature(topo, topo.objects.counties);
+  const txFeatures  = allCounties.features.filter(f => String(f.id).startsWith('48'));
+
+  const svg       = d3.select('#map-svg');
+  const container = document.getElementById('svg-container');
+
+  function draw() {
+    svg.selectAll('*').remove();
+    const W = container.clientWidth  - 16;
+    const H = container.clientHeight - 16;
+    if (W <= 0 || H <= 0) return;
+
+    const txGeo = { type: 'FeatureCollection', features: txFeatures };
+    const proj  = d3.geoMercator().fitSize([W, H], txGeo);
+    const path  = d3.geoPath().projection(proj);
+
+    const g = svg.attr('viewBox', `0 0 ${W} ${H}`).append('g');
+
+    countyPaths = g.selectAll('path')
+      .data(txFeatures)
+      .join('path')
+        .attr('d', path)
+        .attr('stroke', '#0a0a1a')
+        .attr('stroke-width', 0.6)
+        .style('cursor', 'pointer')
+        .on('mousemove', onHover)
+        .on('mouseleave', onLeave)
+        .on('click', onClick);
+
+    colorMap();
+  }
+
+  draw();
+  new ResizeObserver(draw).observe(container);
+}
+
+function getCountyFill(feature) {
+  const name   = (feature.properties?.name || '').toUpperCase();
+  const cands  = countyData[name]?.[activeParty];
+  if (!cands || !cands.length) return '#1a1a30';
+
+  const sorted = [...cands].sort((a, b) => (parseFloat(b.pct_vote) || 0) - (parseFloat(a.pct_vote) || 0));
+  const leader = sorted[0];
+  const pct    = parseFloat(leader.pct_vote) || 0;
+  if (pct === 0) return '#1a1a30';
+
+  const second  = parseFloat(sorted[1]?.pct_vote || 0);
+  const margin  = Math.min((pct - second) / 50, 1);
+  const base    = validHex(leader.hex_color) ? leader.hex_color : partyDefaults[activeParty];
+  return hexBlend(base, '#10101e', margin);
+}
+
+function colorMap() {
+  if (!countyPaths) return;
+  countyPaths.attr('fill', d => getCountyFill(d));
+}
+
+function onHover(event, feature) {
+  const name  = (feature.properties?.name || '').toUpperCase();
+  const cands = countyData[name]?.[activeParty];
+  const tt    = document.getElementById('tt');
+
+  document.getElementById('tt-name').textContent = name + ' COUNTY';
+
+  const ttCands = document.getElementById('tt-cands');
+  if (cands && cands.length) {
+    const sorted = [...cands].sort((a, b) => (parseFloat(b.pct_vote) || 0) - (parseFloat(a.pct_vote) || 0)).slice(0, 3);
+    ttCands.innerHTML = sorted.map(c => {
+      const color = validHex(c.hex_color) ? c.hex_color : partyDefaults[activeParty];
+      return `<div class="tt-row">
+        <div class="tt-cn">${c.name_last}</div>
+        <div class="tt-pct" style="color:${color}">${parseFloat(c.pct_vote || 0).toFixed(1)}%</div>
+      </div>`;
+    }).join('');
+    const rpt = cands[0]?.pct_reporting;
+    document.getElementById('tt-rpt').textContent = rpt ? `${rpt}% precincts reporting` : '';
+  } else {
+    ttCands.innerHTML = `<div style="color:var(--subtext);font-size:0.73rem;font-family:'Barlow',sans-serif">No county data</div>`;
+    document.getElementById('tt-rpt').textContent = '';
+  }
+
+  const box = document.getElementById('svg-container').getBoundingClientRect();
+  let x = event.clientX - box.left + 14;
+  let y = event.clientY - box.top  - 12;
+  if (x + 175 > box.width)  x = event.clientX - box.left - 175;
+  if (y + 130 > box.height) y = event.clientY - box.top  - 130;
+  tt.style.left = x + 'px';
+  tt.style.top  = y + 'px';
+  tt.classList.add('show');
+}
+
+function onLeave() { document.getElementById('tt').classList.remove('show'); }
+
+function onClick(event, feature) {
+  openCounty((feature.properties?.name || '').toUpperCase());
+}
+
+function openCounty(countyName) {
+  document.getElementById('cm-county-name').textContent = countyName + ' COUNTY';
+
+  const cData  = countyData[countyName];
+  const rptVal = cData?.R?.[0]?.pct_reporting || cData?.D?.[0]?.pct_reporting || null;
+  document.getElementById('cm-rpt').textContent = rptVal ? `${rptVal}% of precincts reporting` : '';
+
+  const body = document.getElementById('cm-body');
+  if (!cData || (!cData.R?.length && !cData.D?.length)) {
+    body.innerHTML = `<div style="grid-column:1/-1;padding:28px;text-align:center;color:var(--subtext);font-family:'Barlow',sans-serif;">No county-level data for ${countyName}.</div>`;
+  } else {
+    body.innerHTML = ['R', 'D'].map(p => {
+      const cands  = [...(cData[p] || [])].sort((a, b) => (parseFloat(b.pct_vote) || 0) - (parseFloat(a.pct_vote) || 0));
+      const pLabel = p === 'R' ? '🔴 Republican' : '🔵 Democratic';
+      const pDef   = partyDefaults[p];
+      const maxPct = Math.max(...cands.map(c => parseFloat(c.pct_vote) || 0), 1);
+
+      if (!cands.length) return `<div class="cm-party-block">
+        <div class="cm-party-hd" style="background:${hexRgba(pDef,0.18)};color:${lighten(pDef)}">${pLabel}</div>
+        <div style="color:var(--subtext);font-size:0.8rem;font-family:'Barlow',sans-serif;padding:8px">No data</div>
+      </div>`;
+
+      return `<div class="cm-party-block">
+        <div class="cm-party-hd" style="background:${hexRgba(pDef,0.18)};color:${lighten(pDef)}">${pLabel}</div>
+        ${cands.map(c => {
+          const pct   = parseFloat(c.pct_vote) || 0;
+          const bgW   = Math.round((pct / maxPct) * 100);
+          const color = validHex(c.hex_color) ? c.hex_color : pDef;
+          const isW   = c.called === 'true' || c.called === '1';
+          return `<div class="cm-cand-row">
+            <div class="cm-bg" style="width:${bgW}%;background:${color}"></div>
+            <div style="flex:1">
+              <div class="cm-name">${c.name_last}${isW ? ' ✓' : ''}</div>
+              <div class="cm-votes">${fmtVotes(c.votes)}</div>
+            </div>
+            <div class="cm-pct" style="color:${color}">${pct.toFixed(1)}%</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('county-modal').classList.add('open');
+}
+
+function closeCounty() {
+  document.getElementById('county-modal').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── REFRESH TIMER
+// ══════════════════════════════════════════════════════════════════
+function startRefreshTimer() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  countdown = REFRESH_SEC;
+  refreshTimer = setInterval(async () => {
+    countdown--;
+    document.getElementById('hd-timer').textContent = `Refresh in ${countdown}s`;
+    if (countdown <= 0) {
+      countdown = REFRESH_SEC;
+      await loadResults();
+    }
+  }, 1000);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── STATUS & UTILS
+// ══════════════════════════════════════════════════════════════════
+function setStatus(msg, isLive) {
+  const el = document.getElementById('hd-status');
+  el.textContent = msg;
+  el.className = 'hd-status' + (isLive ? ' live' : '');
+}
+
+function validHex(h) { return typeof h === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(h.trim()); }
+function fmtVotes(n) {
+  const num = parseInt((n || '').toString().replace(/,/g, ''), 10);
+  return isNaN(num) ? '—' : num.toLocaleString();
+}
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map(x => x + x).join('') : h, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function hexBlend(hex1, hex2, t) {
+  const [r1,g1,b1] = hexToRgb(hex1);
+  const [r2,g2,b2] = hexToRgb(hex2);
+  return `rgb(${Math.round(r1*t+r2*(1-t))},${Math.round(g1*t+g2*(1-t))},${Math.round(b1*t+b2*(1-t))})`;
+}
+function hexRgba(hex, a) {
+  const [r,g,b] = hexToRgb(hex);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function lighten(hex) {
+  const [r,g,b] = hexToRgb(hex);
+  return `rgb(${Math.min(255,r+80)},${Math.min(255,g+80)},${Math.min(255,b+80)})`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── INIT
+// ══════════════════════════════════════════════════════════════════
+async function init() {
+  setStatus('Loading…', false);
+  await loadCandidates();   // fetch candidates.csv once
+  await loadResults();      // fetch results.csv first time
+  setParty('R');            // apply initial party styling + render
+  await initMap();          // draw map (uses countyData already populated)
+  startRefreshTimer();      // start 30s results refresh loop
+}
+
+init();
+</script>
+</body>
+</html>
