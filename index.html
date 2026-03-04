@@ -574,6 +574,7 @@ function processResults(resultRows) {
 
   renderBoard();
   colorMap();
+  updateRunoffNotices();
   document.getElementById('footer-time').textContent = 'Updated: ' + new Date().toLocaleTimeString();
 }
 
@@ -597,6 +598,7 @@ function setParty(p) {
 
   renderBoard();
   colorMap();
+  updateRunoffNotices();
 }
 
 function getLeadColor(p) {
@@ -631,15 +633,25 @@ function renderBoard() {
   const sorted = [...cands].sort((a, b) => (parseFloat(b.pct_vote) || 0) - (parseFloat(a.pct_vote) || 0));
   const maxPct = Math.max(...sorted.map(c => parseFloat(c.pct_vote) || 0), 1);
 
+  // Count how many candidates are marked called — if >1 it's a runoff scenario
+  const calledCount = sorted.filter(c => c.called === 'true' || c.called === '1').length;
+  const isRunoffScenario = calledCount > 1;
+
   list.innerHTML = sorted.map(c => {
     const pct    = parseFloat(c.pct_vote)  || 0;
     const barW   = Math.round((pct / 100)  * 100);
     const bgW    = Math.round((pct / maxPct) * 100);
     const color  = validHex(c.hex_color) ? c.hex_color : leadColor;
-    const isWin  = c.called === 'true' || c.called === '1';
+    const isCalled = c.called === 'true' || c.called === '1';
     const isInc  = c.incumbent === 'true' || c.incumbent === '1';
-    const above50 = pct >= 50 && !isWin;
+    const above50 = pct >= 50 && !isCalled;
     const photo  = c.photo_url && c.photo_url.trim();
+
+    const calledBadge = isCalled
+      ? isRunoffScenario
+        ? '<span class="badge bdg-win">Advanced to Runoff ✓</span>'
+        : '<span class="badge bdg-win">Winner ✓</span>'
+      : '';
 
     return `<div class="cand-row">
       <div class="cand-fill" style="background:${color};width:${bgW}%"></div>
@@ -648,13 +660,14 @@ function renderBoard() {
         : `<div class="no-ph">👤</div>`}</div>
       <div class="cand-info">
         <div class="cand-badges">
-          ${isInc   ? '<span class="badge bdg-inc">Incumbent</span>' : ''}
-          ${isWin   ? '<span class="badge bdg-win">Winner ✓</span>' : ''}
-          ${above50 ? '<span class="badge bdg-runoff">Above 50%</span>' : ''}
+          ${calledBadge}
+          ${above50    ? '<span class="badge bdg-runoff">Above 50%</span>' : ''}
         </div>
         <div class="cand-first">${c.name_first || ''}</div>
         <div class="cand-last">${c.name_last || '—'}</div>
-        ${c.subtitle ? `<div class="cand-sub">${c.subtitle}</div>` : ''}
+        <div class="cand-badges" style="margin-top:3px">
+          ${isInc ? '<span class="badge bdg-inc">Incumbent</span>' : ''}
+        </div>
       </div>
       <div class="cand-bar-cell">
         <div class="bar-track">
@@ -828,6 +841,23 @@ function openCounty(countyName) {
 
 function closeCounty() {
   document.getElementById('county-modal').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── RUNOFF NOTICE
+// ══════════════════════════════════════════════════════════════════
+function updateRunoffNotices() {
+  const notice = document.querySelector('.runoff-notice');
+  if (!notice) return;
+  const p = activeParty;
+  const calledCount = (stateData[p] || []).filter(c => c.called === 'true' || c.called === '1').length;
+  if (calledCount > 1) {
+    notice.textContent = '🏁 Runoff confirmed — top two candidates advance to May 2026';
+  } else if (calledCount === 1) {
+    notice.textContent = '✓ Race called — winner declared';
+  } else {
+    notice.textContent = '50% required to win — Runoff: May 2026 if no majority';
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
