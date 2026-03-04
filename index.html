@@ -570,7 +570,7 @@ function processResults(resultRows) {
   ['R', 'D'].forEach(p => {
     const rpt = stateData[p]?.[0]?.pct_reporting;
     const el  = document.getElementById(`tab-rpt-${p}`);
-    if (el) el.textContent = rpt ? `${rpt}% reporting` : '—% reporting';
+    if (el) el.textContent = rpt ? `${fmtReporting(rpt)}% reporting` : '—% reporting';
   });
 
   renderBoard();
@@ -623,7 +623,7 @@ function renderBoard() {
   hdr.style.background    = `linear-gradient(90deg, ${hexRgba(leadColor, 0.38)}, ${hexRgba(leadColor, 0.05)})`;
   hdr.style.borderBottom  = `1px solid ${hexRgba(leadColor, 0.28)}`;
   document.getElementById('rp-title').textContent  = label;
-  document.getElementById('rp-rpt-val').textContent = rpt !== '—' ? rpt + '%' : '—';
+  document.getElementById('rp-rpt-val').textContent = rpt !== '—' ? fmtReporting(rpt) + '%' : '—';
 
   const list = document.getElementById('cand-list');
   if (!cands.length) {
@@ -773,7 +773,7 @@ function onHover(event, feature) {
       </div>`;
     }).join('');
     const rpt = cands[0]?.pct_reporting;
-    document.getElementById('tt-rpt').textContent = rpt ? `${rpt}% precincts reporting` : '';
+    document.getElementById('tt-rpt').textContent = rpt ? `${fmtReporting(rpt)}% precincts reporting` : '';
   } else {
     ttCands.innerHTML = `<div style="color:var(--subtext);font-size:0.73rem;font-family:'Barlow',sans-serif">No county data</div>`;
     document.getElementById('tt-rpt').textContent = '';
@@ -800,7 +800,7 @@ function openCounty(countyName) {
 
   const cData  = countyData[countyName];
   const rptVal = cData?.R?.[0]?.pct_reporting || cData?.D?.[0]?.pct_reporting || null;
-  document.getElementById('cm-rpt').textContent = rptVal ? `${rptVal}% of precincts reporting` : '';
+  document.getElementById('cm-rpt').textContent = rptVal ? `${fmtReporting(rptVal)}% of precincts reporting` : '';
 
   const body = document.getElementById('cm-body');
   if (!cData || (!cData.R?.length && !cData.D?.length)) {
@@ -894,6 +894,15 @@ function validHex(h) { return typeof h === 'string' && /^#[0-9a-fA-F]{3,6}$/.tes
 function fmtVotes(n) {
   const num = parseInt((n || '').toString().replace(/,/g, ''), 10);
   return isNaN(num) ? '—' : num.toLocaleString();
+}
+// When LIVE_UPDATES is true, cap display at ">99.9%" so viewers don't think
+// results are fully certified. When LIVE_UPDATES is false (final), show 100.0%.
+function fmtReporting(val) {
+  if (!val && val !== 0) return '—';
+  const n = parseFloat(val);
+  if (isNaN(n)) return '—';
+  if (LIVE_UPDATES && n >= 100) return '>99.9';
+  return n.toFixed(1);
 }
 function hexToRgb(hex) {
   const h = hex.replace('#', '');
