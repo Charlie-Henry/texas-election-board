@@ -853,7 +853,7 @@ function updateRunoffNotices() {
   const p = activeParty;
   const calledCount = (stateData[p] || []).filter(c => c.called === 'true' || c.called === '1').length;
   if (calledCount > 1) {
-    notice.textContent = '🏁 Runoff confirmed — top two candidates advance to May 2026';
+    notice.textContent = '✓ Runoff confirmed — top two candidates advance to May 2026';
   } else if (calledCount === 1) {
     notice.textContent = '✓ Race called — winner declared';
   } else {
