@@ -387,6 +387,7 @@ body {
 const CANDIDATES_URL = 'https://storage.googleapis.com/aus-dashboard/election_big_board/candidates_2026.csv'; // e.g. 'https://storage.googleapis.com/my-bucket/candidates.csv'
 const RESULTS_URL    = 'https://storage.googleapis.com/aus-dashboard/election_big_board/results_2026.csv'; // e.g. 'https://storage.googleapis.com/my-bucket/results.csv'
 const REFRESH_SEC    = 300;   // how often to re-fetch results (candidates are fetched once)
+const LIVE_UPDATES   = true; // set to false after election night — disables polling and shows "Final Results" status
 
 // ══════════════════════════════════════════════════════════════════
 // ── DEMO DATA ────────────────────────────────────────────────────
@@ -530,10 +531,10 @@ async function loadResults() {
   let text;
   if (RESULTS_URL) {
     text = await fetchCSV(RESULTS_URL);
-    setStatus('Live', true);
+    setStatus(LIVE_UPDATES ? 'Live' : 'Final Results', LIVE_UPDATES);
   } else {
     text = DEMO_RESULTS;
-    setStatus('Demo', false);
+    setStatus(LIVE_UPDATES ? 'Demo' : 'Final Results', false);
   }
 
   const rows = parseCSV(text);
@@ -864,6 +865,10 @@ function updateRunoffNotices() {
 // ── REFRESH TIMER
 // ══════════════════════════════════════════════════════════════════
 function startRefreshTimer() {
+  if (!LIVE_UPDATES) {
+    document.getElementById('hd-timer').textContent = '';
+    return; // polling disabled — board is frozen at final results
+  }
   if (refreshTimer) clearInterval(refreshTimer);
   countdown = REFRESH_SEC;
   refreshTimer = setInterval(async () => {
