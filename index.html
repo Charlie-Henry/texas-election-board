@@ -320,6 +320,103 @@ body {
   color: var(--subtext); border-top: 1px solid var(--border);
   background: #05050e;
 }
+
+/* ══════════════════════════════════
+   MOBILE
+══════════════════════════════════ */
+@media (max-width: 700px) {
+
+  /* Allow body to scroll on mobile */
+  html, body { height: auto; overflow: auto; }
+  body { height: 100%; min-height: 100vh; }
+
+  /* ── Header ── */
+  #header {
+    height: auto; flex-wrap: wrap;
+    padding-bottom: 0;
+  }
+  .hd-brand {
+    padding: 10px 14px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    width: 100%;
+    justify-content: space-between;
+  }
+  .hd-year { font-size: 1.5rem; }
+  .hd-label .l2 { font-size: 0.9rem; }
+  .hd-right {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding: 6px 14px;
+    width: 100%;
+    justify-content: space-between;
+    order: 3;
+  }
+  #party-tabs {
+    width: 100%; order: 2;
+  }
+  .party-tab {
+    padding: 0 10px;
+    font-size: 0.8rem;
+    gap: 6px;
+    min-height: 42px;
+  }
+  .tab-dot { width: 8px; height: 8px; }
+  .tab-rpt { font-size: 0.58rem; padding: 2px 5px; }
+
+  /* ── Main layout: stack vertically ── */
+  #main {
+    grid-template-columns: 1fr;
+    overflow: visible;
+    height: auto;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  /* ── Map: fixed height on mobile ── */
+  #map-panel { height: 320px; flex-shrink: 0; }
+  #map-titlebar { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .map-legend { flex-wrap: wrap; gap: 8px; }
+
+  /* ── Results panel: natural height ── */
+  #results-panel { height: auto; overflow: visible; }
+  #cand-list { overflow: visible; height: auto; }
+
+  /* Candidate row: tighten up */
+  .cand-row {
+    grid-template-columns: 46px 1fr 60px 58px;
+    min-height: 56px;
+  }
+  .cand-photo { width: 46px; height: 56px; }
+  .cand-photo .no-ph { width: 46px; height: 56px; font-size: 1.1rem; }
+  .cand-last { font-size: 1rem; }
+  .pct-big { font-size: 1.35rem; }
+  .rp-cols { grid-template-columns: 46px 1fr 60px 58px; }
+
+  /* ── County modal: full screen on mobile ── */
+  #cm-inner {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 12px 12px 0 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+  #county-modal {
+    align-items: flex-end;
+  }
+  #cm-body {
+    grid-template-columns: 1fr;
+    padding: 12px 14px;
+  }
+  #cm-county-name { font-size: 1.2rem; }
+  #cm-close { width: 34px; height: 34px; font-size: 1.1rem; }
+
+  /* ── Footer ── */
+  #footer { height: auto; padding: 6px 14px; flex-direction: column; gap: 2px; text-align: center; }
+}
 </style>
 </head>
 <body>
@@ -357,7 +454,7 @@ body {
     <div id="map-titlebar">
       <div>
         <div class="mt-title" id="map-title">Texas County Map — Republican Primary</div>
-        <div class="mt-sub">Hover for results · Click to drill down</div>
+        <div class="mt-sub" id="map-sub">Hover for results · Click to drill down</div>
       </div>
       <div class="map-legend">
         <div class="leg-item"><div class="leg-sw" id="leg-strong"></div> Strong lead</div>
@@ -407,7 +504,7 @@ body {
 
 <!-- ══ FOOTER ══ -->
 <div id="footer">
-  <span>2026 Texas Primary Big Board</span>
+  <span>2026 Texas Primary Big Board — Created by <a href="https://bsky.app/profile/modalshift.co" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;">Charlie Henry</a></span>
   <span id="footer-time">—</span>
 </div>
 
@@ -791,6 +888,7 @@ function colorMap() {
 }
 
 function onHover(event, feature) {
+  if (isMobile()) return; // on touch devices, skip tooltip — tap goes straight to drilldown
   const name  = (feature.properties?.name || '').toUpperCase();
   const cands = countyData[name]?.[activeParty];
   const tt    = document.getElementById('tt');
@@ -903,6 +1001,10 @@ function closeCounty() {
   document.getElementById('county-modal').classList.remove('open');
 }
 
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeCounty();
+});
+
 // ══════════════════════════════════════════════════════════════════
 // ── RUNOFF NOTICE
 // ══════════════════════════════════════════════════════════════════
@@ -985,13 +1087,22 @@ function lighten(hex) {
 // ══════════════════════════════════════════════════════════════════
 // ── INIT
 // ══════════════════════════════════════════════════════════════════
+const isMobile = () => window.matchMedia('(max-width: 700px)').matches || ('ontouchstart' in window);
+
 async function init() {
   setStatus('Loading…', false);
+
+  // Update map hint text for touch devices
+  if (isMobile()) {
+    const sub = document.getElementById('map-sub');
+    if (sub) sub.textContent = 'Tap a county to see results';
+  }
+
   await loadCandidates();   // fetch candidates.csv once
   await loadResults();      // fetch results.csv first time
   setParty('R');            // apply initial party styling + render
   await initMap();          // draw map (uses countyData already populated)
-  startRefreshTimer();      // start 30s results refresh loop
+  startRefreshTimer();      // start refresh loop
 }
 
 init();
