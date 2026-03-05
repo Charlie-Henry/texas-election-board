@@ -32,7 +32,7 @@ Check out the template (`results_template.csv`). Each row of the results file ha
 - `votes`: Integer number of votes this candidate has received
 - `pct_vote`: 0-100 float that shows the percent of the vote the candidate has received.
 - `pct_reporting`: 0-100 float representing the percent of the precincts that has been reported, this should be the same for all candidates in a particular county.
-- `called`: `true` or `false` if this county or statewide result has been called for a particular candidate.
+- `called`: `true` or `false` if this county or statewide result has been called for a particular candidate. If multiple candidates receive a call in the `STATEWIDE` result, then instead of `WINNER ✓` it will display `ADVANCED TO RUNOFF ✓` on the right side summary.
 
 ## Data Source and Map Config
 
