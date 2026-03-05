@@ -11,8 +11,6 @@ To run locally:
 2. `serve . -p 8080` 
 3. visit http://localhost:8080/ on your browser.
 
-Edit the `const CANDIDATES_URL` and `RESULTS_URL` to point to the csv files you would like to use for the backend. Or supply `null` and fall back on the default test values.
-
 ## Candidates Config
 
 The provided CSV template (`candidates_template.csv`) file shows what data is needed for each candidate in the race:
@@ -36,3 +34,14 @@ Check out the template (`results_template.csv`). Each row of the results file ha
 - `pct_reporting`: 0-100 float representing the percent of the precincts that has been reported, this should be the same for all candidates in a particular county.
 - `called`: `true` or `false` if this county or statewide result has been called for a particular candidate.
 
+## Data Source and Map Config
+
+In `index.html` edit the follow variables to configure your data source and map settings
+
+Edit the following variables to point to the CSV file you have hosted for the backend, or supply `null` and the map will fallback to some hard coded test data.
+- `const CANDIDATES_URL` 
+- `const RESULTS_URL` 
+
+`const LIVE_UPDATES` being set to `true` will make the app refresh with new data every `const REFRESH_SEC` seconds. When `LIVE_UPDATES` is `true` precent reported will max out at >99.9% and never show 100% even if 100 is supplied in the results CSV.
+
+`LIVE_UPDATES` set to `false` will no longer refresh automatically, will display "FINAL RESULTS" on the top right, and will allow 100% reporting to be shown.
