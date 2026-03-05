@@ -38,7 +38,7 @@ Check out the template (`results_template.csv`). Each row of the results file ha
 
 In `index.html` edit these variables to configure your data source and map settings
 
-Edit the following variables to point to the CSV file you have hosted for the backend, or supply `null` and the map will fallback to some hard coded test data.
+Edit the following variables to point to the CSV file you have hosted for the backend, or supply `null` and the map will fallback to some hard coded test data. I would recommend serving these CSVs from an AWS S3 bucket or a Google Cloud Storage bucket. 
 - `const CANDIDATES_URL` 
 - `const RESULTS_URL` 
 
