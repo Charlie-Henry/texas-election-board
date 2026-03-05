@@ -1,6 +1,6 @@
 # Election Night Big Board
 
-[A interactive county-level election map](https://texas-election-board.onrender.com/) for the 2026 Democratic and Republican primaries in Texas. Heavily inspired by the "big boards" used on TV by Steve Kornacki and John King. 
+[An interactive county-level election map](https://texas-election-board.onrender.com/) for the 2026 Democratic and Republican primaries in Texas. Heavily inspired by the "big boards" used on TV by Steve Kornacki and John King. 
 
 ![A screenshot of the map](docs/screenshot.png)
 
