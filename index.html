@@ -275,6 +275,40 @@ body {
 .cm-votes { font-size: 0.67rem; color: var(--subtext); font-family: 'Barlow', sans-serif; }
 .cm-pct { font-size: 1.3rem; font-weight: 900; white-space: nowrap; }
 
+/* ── Party split bar ── */
+#cm-split { padding: 14px 18px 0; }
+#cm-split .split-label {
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--subtext); margin-bottom: 6px; display: flex; justify-content: space-between;
+}
+#cm-split .split-label .sl-rep { color: #e87070; }
+#cm-split .split-label .sl-dem { color: #6fa3e8; }
+#cm-split .split-track {
+  height: 28px; border-radius: 3px; overflow: hidden;
+  display: flex; background: rgba(255,255,255,0.04);
+}
+#cm-split .split-rep {
+  height: 100%; background: #c0392b;
+  display: flex; align-items: center; justify-content: flex-start;
+  padding-left: 8px;
+  font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.9);
+  transition: width 0.8s ease; white-space: nowrap; overflow: hidden;
+  min-width: 0;
+}
+#cm-split .split-dem {
+  height: 100%; background: #1a56b0;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 8px;
+  font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.9);
+  transition: width 0.8s ease; white-space: nowrap; overflow: hidden;
+  min-width: 0;
+}
+#cm-split .split-none {
+  height: 100%; background: rgba(255,255,255,0.04); flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; color: var(--subtext); font-family: 'Barlow', sans-serif;
+}
+
 /* ══════════════════════════════════
    FOOTER
 ══════════════════════════════════ */
@@ -366,6 +400,7 @@ body {
       </div>
       <button id="cm-close" onclick="closeCounty()">✕</button>
     </div>
+    <div id="cm-split"></div>
     <div id="cm-body"></div>
   </div>
 </div>
@@ -801,6 +836,30 @@ function openCounty(countyName) {
   const cData  = countyData[countyName];
   const rptVal = cData?.R?.[0]?.pct_reporting || cData?.D?.[0]?.pct_reporting || null;
   document.getElementById('cm-rpt').textContent = rptVal ? `${fmtReporting(rptVal)}% of precincts reporting` : '';
+
+  // ── Party split bar ──
+  const splitEl = document.getElementById('cm-split');
+  const rVotes = (cData?.R || []).reduce((s, c) => s + (parseInt(c.votes) || 0), 0);
+  const dVotes = (cData?.D || []).reduce((s, c) => s + (parseInt(c.votes) || 0), 0);
+  const total  = rVotes + dVotes;
+  if (total > 0) {
+    const rPct = (rVotes / total * 100);
+    const dPct = (dVotes / total * 100);
+    const rW   = rPct.toFixed(1);
+    const dW   = dPct.toFixed(1);
+    // Only show label text if the segment is wide enough
+    const rLabel = rPct >= 12 ? `${rW}% Rep` : '';
+    const dLabel = dPct >= 12 ? `Dem ${dW}%` : '';
+    splitEl.innerHTML = `
+      <div class="split-track">
+        <div class="split-rep" style="width:${rW}%">${rLabel}</div>
+        <div class="split-dem" style="width:${dW}%">${dLabel}</div>
+      </div>`;
+  } else {
+    splitEl.innerHTML = `
+      <div class="split-label"><span>Primary Vote Split</span></div>
+      <div class="split-track"><div class="split-none">No vote data available</div></div>`;
+  }
 
   const body = document.getElementById('cm-body');
   if (!cData || (!cData.R?.length && !cData.D?.length)) {
