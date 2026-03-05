@@ -1,0 +1,8 @@
+candidate_id,party,name_first,name_last,incumbent,photo_url,hex_color
+R001,R,John,Cornyn,TRUE,,#c0392b
+R002,R,Ken,Paxton,FALSE,,#e85d04
+R003,R,Wesley,Hunt,FALSE,,#f77f00
+R004,R,Brandon,Herrera,FALSE,,#fcbf49
+D001,D,Colin,Allred,FALSE,,#1a56b0
+D002,D,Roland,Gutierrez,FALSE,,#4895ef
+D003,D,Ana-Maria,Ramos,FALSE,,#4cc9f0
