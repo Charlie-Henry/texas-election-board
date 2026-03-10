@@ -762,6 +762,7 @@ function setParty(p) {
   activeParty = p;
   activeCandId = null;
   clearBubbles();
+  colorMap();
 
   ['R', 'D'].forEach(id => {
     document.getElementById(`tab-${id}`).classList.toggle('active', id === p);
@@ -959,7 +960,12 @@ function getCountyFill(feature) {
 
 function colorMap() {
   if (!countyPaths) return;
-  countyPaths.attr('fill', d => getCountyFill(d));
+  // If a candidate is selected, show flat dark fill so bubbles pop
+  if (activeCandId) {
+    countyPaths.attr('fill', '#1a1a30');
+  } else {
+    countyPaths.attr('fill', d => getCountyFill(d));
+  }
 }
 
 function drawBubbles(candidateId) {
@@ -1019,8 +1025,8 @@ function drawBubbles(candidateId) {
 
     // Stagger entrance by index for a wave effect
     circle.transition()
-      .delay(i * 18)
-      .duration(500)
+      .delay(i * 4)
+      .duration(160)
       .ease(d3.easeBounceOut)
       .attr('r', r);
   });
@@ -1029,24 +1035,23 @@ function drawBubbles(candidateId) {
 function clearBubbles() {
   if (!bubbleGroup) return;
   bubbleGroup.selectAll('circle')
-    .transition().duration(200).ease(d3.easeQuadIn)
+    .transition().duration(80).ease(d3.easeQuadIn)
     .attr('r', 0)
     .remove();
 }
 
 function toggleCandBubbles(candidateId) {
   if (activeCandId === candidateId) {
-    // Second click — clear
     activeCandId = null;
     clearBubbles();
-    // Re-render rows to remove selected highlight
+    colorMap();
     renderBoard();
   } else {
     activeCandId = candidateId;
     clearBubbles();
-    // Small delay so clear transition finishes before new bubbles appear
-    setTimeout(() => drawBubbles(candidateId), 220);
-    renderBoard(); // update selected highlight
+    colorMap();
+    setTimeout(() => drawBubbles(candidateId), 90);
+    renderBoard();
   }
 }
 
