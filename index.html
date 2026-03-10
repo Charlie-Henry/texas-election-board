@@ -249,7 +249,8 @@ body {
 .cand-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
 .cand-photo .no-ph {
   width: 54px; height: 62px; display: flex; align-items: center; justify-content: center;
-  font-size: 1.4rem; background: rgba(255,255,255,0.03); color: var(--subtext);
+  font-size: 1.6rem; font-weight: 900; font-family: 'Barlow Condensed', sans-serif;
+  color: rgba(255,255,255,0.9); letter-spacing: 0;
 }
 .cand-info { padding: 0 8px; }
 .cand-badges { display: flex; gap: 4px; margin-bottom: 2px; flex-wrap: wrap; }
@@ -461,7 +462,7 @@ body {
     min-height: 56px;
   }
   .cand-photo { width: 46px; height: 56px; }
-  .cand-photo .no-ph { width: 46px; height: 56px; font-size: 1.1rem; }
+  .cand-photo .no-ph { width: 46px; height: 56px; font-size: 1.3rem; }
   .cand-last { font-size: 1rem; }
   .pct-big { font-size: 1.35rem; }
   .rp-cols { grid-template-columns: 46px 1fr 60px 58px; }
@@ -900,11 +901,14 @@ function renderBoard() {
         : `<span class="badge bdg-win">${checkSvg} Winner</span>`
       : '';
 
+    const partyLetter = (c.party || activeParty).toUpperCase() === 'R' ? 'R' : 'D';
+    const phBg = hexRgba(color, 0.55);
+
     return `<div class="cand-row${activeCandId === c.candidate_id ? ' selected' : ''}" data-cand-id="${c.candidate_id}" onclick="toggleCandBubbles('${c.candidate_id}')">
       <div class="cand-fill" style="background:${color};width:${bgW}%"></div>
       <div class="cand-photo">${photo
-        ? `<img src="${photo}" alt="${c.name_last}" onerror="this.parentElement.innerHTML='<div class=no-ph>👤</div>'">`
-        : `<div class="no-ph">👤</div>`}</div>
+        ? `<img src="${photo}" alt="${c.name_last}" onerror="this.parentElement.innerHTML='<div class=no-ph style=background:${phBg}>${partyLetter}</div>'">`
+        : `<div class="no-ph" style="background:${phBg}">${partyLetter}</div>`}</div>
       <div class="cand-info">
         <div class="cand-badges">
           ${calledBadge}
