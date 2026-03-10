@@ -133,6 +133,23 @@ body {
 .leg-item { display: flex; align-items: center; gap: 4px; }
 .leg-sw { width: 11px; height: 11px; border-radius: 1px; }
 
+/* Bubble legend */
+#leg-bubble { gap: 14px; }
+.leg-cand-name {
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 2px; white-space: nowrap;
+}
+.leg-bubbles {
+  display: flex; align-items: flex-end; gap: 10px;
+}
+.leg-bubble-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.leg-bubble-item span {
+  font-size: 0.58rem; color: var(--subtext); font-family: 'Barlow', sans-serif;
+  white-space: nowrap;
+}
+
 #svg-container {
   flex: 1; display: flex; align-items: center; justify-content: center;
   padding: 8px; position: relative; overflow: hidden;
@@ -494,10 +511,15 @@ body {
         <div class="mt-title" id="map-title">Texas County Map — Republican Primary</div>
         <div class="mt-sub" id="map-sub">Hover for results · Click to drill down</div>
       </div>
-      <div class="map-legend">
-        <div class="leg-item"><div class="leg-sw" id="leg-strong"></div> Strong lead</div>
-        <div class="leg-item"><div class="leg-sw" id="leg-lean"></div> Lean</div>
-        <div class="leg-item"><div class="leg-sw" style="background:#1a1a30"></div> No data</div>
+      <div id="map-legend-wrap">
+        <div class="map-legend" id="leg-normal">
+          <div class="leg-item"><div class="leg-sw" id="leg-strong"></div> Strong lead</div>
+          <div class="leg-item"><div class="leg-sw" id="leg-lean"></div> Lean</div>
+          <div class="leg-item"><div class="leg-sw" style="background:#1a1a30"></div> No data</div>
+        </div>
+        <div class="map-legend" id="leg-bubble" style="display:none;align-items:center;gap:14px;">
+          <!-- filled in by updateBubbleLegend() -->
+        </div>
       </div>
     </div>
     <div id="svg-container">
@@ -763,6 +785,7 @@ function setParty(p) {
   activeCandId = null;
   clearBubbles();
   colorMap();
+  updateBubbleLegend();
 
   ['R', 'D'].forEach(id => {
     document.getElementById(`tab-${id}`).classList.toggle('active', id === p);
@@ -934,7 +957,6 @@ async function initMap() {
     bubbleGroup = g.append('g').attr('class', 'bubble-layer').style('pointer-events', 'none');
 
     colorMap();
-    // Re-draw bubbles if a candidate is still selected after resize
     if (activeCandId) drawBubbles(activeCandId);
   }
 
@@ -1045,14 +1067,63 @@ function toggleCandBubbles(candidateId) {
     activeCandId = null;
     clearBubbles();
     colorMap();
+    updateBubbleLegend();
     renderBoard();
   } else {
     activeCandId = candidateId;
     clearBubbles();
     colorMap();
+    updateBubbleLegend();
     setTimeout(() => drawBubbles(candidateId), 90);
     renderBoard();
   }
+}
+
+function updateBubbleLegend() {
+  const normal = document.getElementById('leg-normal');
+  const bubble = document.getElementById('leg-bubble');
+  if (!activeCandId) {
+    normal.style.display = '';
+    bubble.style.display = 'none';
+    return;
+  }
+
+  const cand  = candidateMap[activeCandId];
+  const color = cand && validHex(cand.hex_color) ? cand.hex_color : partyDefaults[activeParty];
+  const name  = cand ? `${cand.name_first} ${cand.name_last}` : activeCandId;
+
+  // Find max votes for this candidate across all counties
+  let maxVotes = 0, minVotes = Infinity, totalVotes = 0, countyCount = 0;
+  for (const parties of Object.values(countyData)) {
+    const row = (parties[cand?.party] || []).find(r => r.candidate_id === activeCandId);
+    if (!row) continue;
+    const v = parseInt(row.votes) || 0;
+    if (v <= 0) continue;
+    if (v > maxVotes) maxVotes = v;
+    if (v < minVotes) minVotes = v;
+    totalVotes += v;
+    countyCount++;
+  }
+  if (maxVotes === 0) { normal.style.display = ''; bubble.style.display = 'none'; return; }
+
+  const midVotes = Math.round((minVotes + maxVotes) / 2);
+
+  // Fixed decorative sizes — not to scale, just illustrative
+  const sizes = [4, 7, 11];
+
+  const svgBubbles = sizes.map(r => `
+    <svg width="24" height="24">
+      <circle cx="12" cy="${24 - r}" r="${r}"
+        fill="${color}" fill-opacity="0.72" stroke="#fff" stroke-opacity="0.25" stroke-width="0.8"/>
+    </svg>`).join('');
+
+  bubble.innerHTML = `
+    <div class="leg-cand-name" style="background:${hexRgba(color,0.18)};color:${lighten(color)}">${name}</div>
+    <div class="leg-bubbles" style="align-items:flex-end">${svgBubbles}</div>
+    <span style="font-size:0.62rem;color:var(--subtext);font-family:'Barlow',sans-serif;white-space:nowrap">density of votes</span>`;
+
+  normal.style.display = 'none';
+  bubble.style.display = 'flex';
 }
 
 function onHover(event, feature) {
