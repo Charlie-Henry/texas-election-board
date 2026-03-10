@@ -172,6 +172,8 @@ body {
 #rp-title { font-size: 1rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
 #rp-reporting { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); }
 #rp-reporting span { color: #fff; font-size: 0.88rem; font-weight: 800; }
+#rp-lead { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.4); }
+#rp-lead span { font-size: 0.88rem; font-weight: 800; color: var(--gold); }
 
 .rp-cols {
   display: grid; grid-template-columns: 54px 1fr 78px 68px;
@@ -501,7 +503,10 @@ body {
   <div id="results-panel">
     <div id="rp-header">
       <div id="rp-title">Republican Primary</div>
-      <div id="rp-reporting">Reporting: <span id="rp-rpt-val">—</span></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <div id="rp-reporting">Reporting: <span id="rp-rpt-val">—</span></div>
+        <div id="rp-lead"></div>
+      </div>
     </div>
     <div class="rp-cols">
       <div></div><div>Candidate</div>
@@ -781,6 +786,22 @@ function renderBoard() {
   hdr.style.borderBottom  = `1px solid ${hexRgba(leadColor, 0.28)}`;
   document.getElementById('rp-title').textContent  = label;
   document.getElementById('rp-rpt-val').textContent = rpt !== '—' ? fmtReporting(rpt) + '%' : '—';
+
+  // Lead calculation — first vs second place by raw votes
+  const leadEl = document.getElementById('rp-lead');
+  if (cands.length >= 2) {
+    const byVotes  = [...cands].sort((a, b) => (parseInt(b.votes) || 0) - (parseInt(a.votes) || 0));
+    const first    = parseInt(byVotes[0]?.votes) || 0;
+    const second   = parseInt(byVotes[1]?.votes) || 0;
+    const leadAmt  = first - second;
+    if (first > 0) {
+      leadEl.innerHTML = `Lead: <span>+${fmtVotes(leadAmt)}</span>`;
+    } else {
+      leadEl.innerHTML = '';
+    }
+  } else {
+    leadEl.innerHTML = '';
+  }
 
   const list = document.getElementById('cand-list');
   if (!cands.length) {
