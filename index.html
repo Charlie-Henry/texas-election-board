@@ -156,6 +156,24 @@ body {
 }
 #map-svg { width: 100%; height: 100%; display: block; }
 
+/* zoom controls */
+#map-zoom-btns {
+  position: absolute; bottom: 12px; right: 12px;
+  display: flex; flex-direction: column; gap: 3px; z-index: 10;
+}
+#map-zoom-btns button {
+  width: 28px; height: 28px;
+  background: rgba(14,14,28,0.92); border: 1px solid rgba(255,255,255,0.14);
+  color: var(--text); font-size: 1.2rem; line-height: 1;
+  border-radius: 3px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  user-select: none;
+}
+#map-zoom-btns button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+#map-zoom-btns button:disabled { opacity: 0.3; cursor: default; }
+
 /* tooltip */
 #tt {
   position: absolute; background: #18182e; border: 1px solid rgba(255,255,255,0.1);
@@ -524,6 +542,10 @@ body {
     </div>
     <div id="svg-container">
       <svg id="map-svg"></svg>
+      <div id="map-zoom-btns">
+        <button id="zoom-in"  onclick="mapZoom(1)"  title="Zoom in">+</button>
+        <button id="zoom-out" onclick="mapZoom(-1)" title="Zoom out">−</button>
+      </div>
       <div id="tt">
         <div class="tt-name" id="tt-name">—</div>
         <div id="tt-cands"></div>
@@ -928,9 +950,14 @@ async function initMap() {
   const svg       = d3.select('#map-svg');
   const container = document.getElementById('svg-container');
 
+  const MIN_ZOOM = 1, MAX_ZOOM = 3;
+  let zoomBehavior = d3.zoom().scaleExtent([MIN_ZOOM, MAX_ZOOM]);
+  let currentG = null;
+
   function draw() {
     svg.selectAll('*').remove();
     bubbleGroup = null;
+    currentG = null;
     const W = container.clientWidth  - 16;
     const H = container.clientHeight - 16;
     if (W <= 0 || H <= 0) return;
@@ -941,6 +968,7 @@ async function initMap() {
     const path  = d3.geoPath().projection(proj);
 
     const g = svg.attr('viewBox', `0 0 ${W} ${H}`).append('g');
+    currentG = g;
 
     countyPaths = g.selectAll('path')
       .data(txFeatures)
@@ -956,8 +984,34 @@ async function initMap() {
     // Bubble layer sits above county paths
     bubbleGroup = g.append('g').attr('class', 'bubble-layer').style('pointer-events', 'none');
 
+    // Wire up zoom — transforms the <g>, not the SVG
+    zoomBehavior.on('zoom', (event) => {
+      g.attr('transform', event.transform);
+      updateZoomBtns(event.transform.k);
+    });
+    svg.call(zoomBehavior).call(zoomBehavior.transform, d3.zoomIdentity);
+
+    // ── Critical: remove the D3 zoom overlay rect so path mouse events still fire ──
+    svg.select('.overlay').remove();
+
+    updateZoomBtns(1);
     colorMap();
     if (activeCandId) drawBubbles(activeCandId);
+  }
+
+  window.mapZoom = function(dir) {
+    if (!currentG) return;
+    const k = d3.zoomTransform(svg.node()).k;
+    const newK = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, k * (dir > 0 ? 1.6 : 1 / 1.6)));
+    svg.transition().duration(280).ease(d3.easeCubicInOut)
+      .call(zoomBehavior.scaleTo, newK);
+  };
+
+  function updateZoomBtns(k) {
+    const zi = document.getElementById('zoom-in');
+    const zo = document.getElementById('zoom-out');
+    if (zi) zi.disabled = k >= MAX_ZOOM;
+    if (zo) zo.disabled = k <= MIN_ZOOM;
   }
 
   draw();
