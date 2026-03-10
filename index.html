@@ -568,7 +568,7 @@ body {
       <div class="rc-r">Votes</div><div class="rc-r">%</div>
     </div>
     <div id="cand-list"></div>
-    <div class="runoff-notice">50% required to win — Runoff: May 2026 if no majority</div>
+    <div class="runoff-notice">50% required to win</div>
   </div>
 </div>
 
@@ -589,7 +589,7 @@ body {
 
 <!-- ══ FOOTER ══ -->
 <div id="footer">
-  <span>2026 Texas Primary Big Board — Created by <a href="https://bsky.app/profile/modalshift.co" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;">Charlie Henry</a></span>
+  <span>2026 Texas Primary Big Board — Data Source: <a href="https://www.sos.state.tx.us/" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;">Texas Secretary of State</a> — Created by <a href="https://bsky.app/profile/modalshift.co" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;">Charlie Henry</a></span>
   <span id="footer-time">—</span>
 </div>
 
@@ -796,7 +796,11 @@ function processResults(resultRows) {
   renderBoard();
   colorMap();
   updateRunoffNotices();
-  document.getElementById('footer-time').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+  if (LIVE_UPDATES) {
+    document.getElementById('footer-time').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+  } else {
+    document.getElementById('footer-time').textContent = '';
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
