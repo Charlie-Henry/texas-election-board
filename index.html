@@ -207,7 +207,26 @@ body {
 .cand-badges { display: flex; gap: 4px; margin-bottom: 2px; flex-wrap: wrap; }
 .badge { font-size: 0.52rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 1px 5px; border-radius: 1px; }
 .bdg-inc { background: #4a4a5a; color: #ccc; }
-.bdg-win { background: #f4b903; color: #000; }
+.bdg-win {
+  background: #f4b903; color: #000;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.bdg-win .chk-svg {
+  width: 10px; height: 10px; flex-shrink: 0; overflow: visible;
+}
+.bdg-win .chk-path {
+  fill: none;
+  stroke: #000;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 14;
+  stroke-dashoffset: 14;
+  animation: draw-check 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes draw-check {
+  to { stroke-dashoffset: 0; }
+}
 .bdg-runoff { background: #7c3aed; color: #fff; }
 .cand-first { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); }
 .cand-last { font-size: 1.2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.05; }
@@ -780,10 +799,12 @@ function renderBoard() {
     const above50 = pct >= 50 && !isCalled;
     const photo  = c.photo_url && c.photo_url.trim();
 
+    const checkSvg = `<svg class="chk-svg" viewBox="0 0 12 10"><path class="chk-path" d="M1.5 5 L4.5 8.5 L10.5 1.5"/></svg>`;
+
     const calledBadge = isCalled
       ? isRunoffScenario
-        ? '<span class="badge bdg-win">Advanced to Runoff ✓</span>'
-        : '<span class="badge bdg-win">Winner ✓</span>'
+        ? `<span class="badge bdg-win">${checkSvg} Advanced to Runoff</span>`
+        : `<span class="badge bdg-win">${checkSvg} Winner</span>`
       : '';
 
     return `<div class="cand-row">
@@ -813,10 +834,14 @@ function renderBoard() {
       </div>
     </div>`;
   }).join('');
-}
 
-// ══════════════════════════════════════════════════════════════════
-// ── MAP
+  // Force re-animation of checkmark paths on each render
+  list.querySelectorAll('.chk-path').forEach(path => {
+    path.style.animation = 'none';
+    path.getBoundingClientRect(); // trigger reflow
+    path.style.animation = '';
+  });
+}
 // ══════════════════════════════════════════════════════════════════
 const TOPO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json';
 
