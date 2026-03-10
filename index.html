@@ -222,10 +222,16 @@ body {
   stroke-linejoin: round;
   stroke-dasharray: 14;
   stroke-dashoffset: 14;
-  animation: draw-check 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: draw-check 3.75s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 @keyframes draw-check {
-  to { stroke-dashoffset: 0; }
+  /* draw: 0 → 0.75s (20% of 3.75s) */
+  0%   { stroke-dashoffset: 14; }
+  20%  { stroke-dashoffset: 0; }
+  /* hold fully drawn until just before loop */
+  95%  { stroke-dashoffset: 0; }
+  /* snap back to hidden ready for next loop */
+  100% { stroke-dashoffset: 14; }
 }
 .bdg-runoff { background: #7c3aed; color: #fff; }
 .cand-first { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); }
