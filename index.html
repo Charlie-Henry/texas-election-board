@@ -955,7 +955,17 @@ async function initMap() {
   const container = document.getElementById('svg-container');
 
   const MIN_ZOOM = 1, MAX_ZOOM = 3;
-  let zoomBehavior = d3.zoom().scaleExtent([MIN_ZOOM, MAX_ZOOM]);
+  let zoomBehavior = d3.zoom()
+    .scaleExtent([MIN_ZOOM, MAX_ZOOM])
+    .filter(function(event) {
+      // Always allow wheel/button zoom; only allow drag/pan when zoomed in
+      if (event.type === 'wheel') return true;
+      if (event.type === 'mousedown' || event.type === 'touchstart') {
+        const k = d3.zoomTransform(svg.node()).k;
+        return k > MIN_ZOOM;
+      }
+      return true;
+    });
   let currentG = null;
 
   function draw() {
@@ -990,14 +1000,22 @@ async function initMap() {
 
     // Wire up zoom — transforms the <g>, not the SVG
     zoomBehavior.on('zoom', (event) => {
+      const { k, x, y } = event.transform;
+      // When fully zoomed out, snap translation back to origin (re-center)
+      if (k <= MIN_ZOOM && (x !== 0 || y !== 0)) {
+        svg.call(zoomBehavior.transform, d3.zoomIdentity);
+        return;
+      }
       g.attr('transform', event.transform);
-      updateZoomBtns(event.transform.k);
+      updateZoomBtns(k);
+      svg.style('cursor', k > MIN_ZOOM ? 'grab' : 'default');
     });
     svg.call(zoomBehavior).call(zoomBehavior.transform, d3.zoomIdentity);
 
     // ── Critical: remove the D3 zoom overlay rect so path mouse events still fire ──
     svg.select('.overlay').remove();
 
+    svg.style('cursor', 'default');
     updateZoomBtns(1);
     colorMap();
     if (activeCandId) drawBubbles(activeCandId);
@@ -1007,8 +1025,14 @@ async function initMap() {
     if (!currentG) return;
     const k = d3.zoomTransform(svg.node()).k;
     const newK = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, k * (dir > 0 ? 1.6 : 1 / 1.6)));
-    svg.transition().duration(280).ease(d3.easeCubicInOut)
-      .call(zoomBehavior.scaleTo, newK);
+    if (newK <= MIN_ZOOM) {
+      // Zoom out to minimum — animate back to full identity (centered)
+      svg.transition().duration(280).ease(d3.easeCubicInOut)
+        .call(zoomBehavior.transform, d3.zoomIdentity);
+    } else {
+      svg.transition().duration(280).ease(d3.easeCubicInOut)
+        .call(zoomBehavior.scaleTo, newK);
+    }
   };
 
   function updateZoomBtns(k) {
