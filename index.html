@@ -906,7 +906,7 @@ function renderBoard() {
 
     return `<div class="cand-row${activeCandId === c.candidate_id ? ' selected' : ''}" data-cand-id="${c.candidate_id}" onclick="toggleCandBubbles('${c.candidate_id}')">
       <div class="cand-fill" style="background:${color};width:${bgW}%"></div>
-      <div class="cand-photo">${photo
+      <div class="cand-photo" style="background:${phBg}">${photo
         ? `<img src="${photo}" alt="${c.name_last}" onerror="this.parentElement.innerHTML='<div class=no-ph style=background:${phBg}>${partyLetter}</div>'">`
         : `<div class="no-ph" style="background:${phBg}">${partyLetter}</div>`}</div>
       <div class="cand-info">
